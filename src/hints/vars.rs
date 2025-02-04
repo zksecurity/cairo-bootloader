@@ -1,9 +1,6 @@
 /// Deserialized bootloader input.
 pub const BOOTLOADER_INPUT: &str = "bootloader_input";
 
-/// The bootloader program, as a Program object.
-pub const BOOTLOADER_PROGRAM_IDENTIFIERS: &str = "bootloader_program_identifiers";
-
 /// Saved state of the output builtin.
 pub const OUTPUT_BUILTIN_STATE: &str = "output_builtin_state";
 
@@ -45,3 +42,7 @@ pub const N_SELECTED_BUILTINS: &str = "n_selected_builtins";
 
 /// "pre_execution_builtin_ptrs"
 pub const PRE_EXECUTION_BUILTIN_PTRS: &str = "pre_execution_builtin_ptrs";
+
+/// The bootloader program, as a Program object.
+#[cfg(test)]
+pub const BOOTLOADER_PROGRAM_IDENTIFIERS: &str = "bootloader_program_identifiers";

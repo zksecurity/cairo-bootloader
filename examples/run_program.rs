@@ -1,54 +1,31 @@
-use std::collections::HashMap;
-use std::error::Error;
-use std::path::Path;
-use std::rc::Rc;
+use std::{collections::HashMap, error::Error, path::Path, rc::Rc};
 
-use cairo_vm::cairo_run::{cairo_run_program_with_initial_scope, CairoRunConfig};
-use cairo_vm::hint_processor::builtin_hint_processor::builtin_hint_processor_definition::HintFunc;
-use cairo_vm::hint_processor::builtin_hint_processor::hint_utils::insert_value_from_var_name;
-use cairo_vm::types::exec_scope::ExecutionScopes;
-use cairo_vm::types::layout_name::LayoutName;
-use cairo_vm::types::program::Program;
-use cairo_vm::vm::errors::cairo_run_errors::CairoRunError;
-use cairo_vm::vm::runners::cairo_runner::CairoRunner;
-use cairo_vm::Felt252;
-
-use cairo_bootloader::bootloaders::load_bootloader;
-use cairo_bootloader::tasks::make_bootloader_tasks;
 use cairo_bootloader::{
-    insert_bootloader_input, BootloaderConfig, BootloaderHintProcessor, BootloaderInput,
-    PackedOutput, SimpleBootloaderInput, TaskSpec,
+    bootloaders::load_bootloader,
+    hints::{BootloaderConfig, BootloaderHintProcessor, BootloaderInput, PackedOutput, SimpleBootloaderInput, TaskSpec},
+    tasks::{insert_bootloader_input, make_bootloader_tasks},
+};
+use cairo_vm::{
+    cairo_run::{cairo_run_program_with_initial_scope, CairoRunConfig},
+    hint_processor::builtin_hint_processor::{builtin_hint_processor_definition::HintFunc, hint_utils::insert_value_from_var_name},
+    types::{exec_scope::ExecutionScopes, layout_name::LayoutName, program::Program},
+    vm::{errors::cairo_run_errors::CairoRunError, runners::cairo_runner::CairoRunner},
+    Felt252,
 };
 
-fn cairo_run_bootloader_in_proof_mode(
-    bootloader_program: &Program,
-    tasks: Vec<TaskSpec>,
-) -> Result<CairoRunner, CairoRunError> {
+fn cairo_run_bootloader_in_proof_mode(bootloader_program: &Program, tasks: Vec<TaskSpec>) -> Result<CairoRunner, CairoRunError> {
     let mut hint_processor = BootloaderHintProcessor::new();
     hint_processor.add_hint(
         "ids.fibonacci_claim_index = program_input['fibonacci_claim_index']".to_string(),
-        Rc::new(HintFunc(Box::new(
-            |vm, exec_scopes, ids_data, ap_tracking, _constants| {
-                let program_input: HashMap<String, serde_json::Value> = exec_scopes
-                    .get::<HashMap<String, serde_json::Value>>("program_input")
-                    .unwrap()
-                    .clone();
-                let fibonacci_claim_index: Felt252 = program_input
-                    .get("fibonacci_claim_index")
-                    .unwrap()
-                    .as_u64()
-                    .unwrap()
-                    .into();
-                insert_value_from_var_name(
-                    "fibonacci_claim_index",
-                    fibonacci_claim_index,
-                    vm,
-                    ids_data,
-                    ap_tracking,
-                )?;
-                Ok(())
-            },
-        ))),
+        Rc::new(HintFunc(Box::new(|vm, exec_scopes, ids_data, ap_tracking, _constants| {
+            let program_input: HashMap<String, serde_json::Value> = exec_scopes
+                .get::<HashMap<String, serde_json::Value>>("program_input")
+                .unwrap()
+                .clone();
+            let fibonacci_claim_index: Felt252 = program_input.get("fibonacci_claim_index").unwrap().as_u64().unwrap().into();
+            insert_value_from_var_name("fibonacci_claim_index", fibonacci_claim_index, vm, ids_data, ap_tracking)?;
+            Ok(())
+        }))),
     );
 
     let cairo_run_config = CairoRunConfig {
@@ -85,12 +62,7 @@ fn cairo_run_bootloader_in_proof_mode(
     insert_bootloader_input(&mut exec_scopes, bootloader_input);
 
     // Run the bootloader
-    cairo_run_program_with_initial_scope(
-        &bootloader_program,
-        &cairo_run_config,
-        &mut hint_processor,
-        exec_scopes,
-    )
+    cairo_run_program_with_initial_scope(&bootloader_program, &cairo_run_config, &mut hint_processor, exec_scopes)
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -99,7 +71,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // let pie_paths = vec![Path::new(
     //     "./dependencies/test-programs/bootloader/pies/fibonacci/cairo_pie.zip",
     // )];
-    let pie_paths = vec![Path::new("./examples/example.zip")];
+    let pie_paths = vec![Path::new("./examples/example.zip").to_path_buf()];
     // let program_inputs_path = Path::new("./examples/fibonacci_input.json");
     // let program_inputs_str = std::fs::read_to_string(program_inputs_path)?;
     // let program_inputs =

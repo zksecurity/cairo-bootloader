@@ -9,15 +9,12 @@ ids.simple_bootloader_output_start = segments.add()
 output_builtin_state = output_builtin.get_state()
 output_builtin.new_state(base=ids.simple_bootloader_output_start)";
 
-pub const BOOTLOADER_PREPARE_SIMPLE_BOOTLOADER_INPUT: &str =
-    "simple_bootloader_input = bootloader_input";
+pub const BOOTLOADER_PREPARE_SIMPLE_BOOTLOADER_INPUT: &str = "simple_bootloader_input = bootloader_input";
 
-pub const BOOTLOADER_RESTORE_BOOTLOADER_OUTPUT: &str =
-    "# Restore the bootloader's output builtin state.
+pub const BOOTLOADER_RESTORE_BOOTLOADER_OUTPUT: &str = "# Restore the bootloader's output builtin state.
 output_builtin.set_state(output_builtin_state)";
 
-pub const BOOTLOADER_LOAD_BOOTLOADER_CONFIG: &str =
-    "from starkware.cairo.bootloaders.bootloader.objects import BootloaderConfig
+pub const BOOTLOADER_LOAD_BOOTLOADER_CONFIG: &str = "from starkware.cairo.bootloaders.bootloader.objects import BootloaderConfig
 bootloader_config: BootloaderConfig = bootloader_input.bootloader_config
 
 ids.bootloader_config = segments.gen_arg(
@@ -28,23 +25,20 @@ ids.bootloader_config = segments.gen_arg(
     ],
 )";
 
-pub const BOOTLOADER_ENTER_PACKED_OUTPUT_SCOPE: &str =
-    "from starkware.cairo.bootloaders.bootloader.objects import PackedOutput
+pub const BOOTLOADER_ENTER_PACKED_OUTPUT_SCOPE: &str = "from starkware.cairo.bootloaders.bootloader.objects import PackedOutput
 
 task_id = len(packed_outputs) - ids.n_subtasks
 packed_output: PackedOutput = packed_outputs[task_id]
 
 vm_enter_scope(new_scope_locals=dict(packed_output=packed_output))";
 
-pub const BOOTLOADER_IMPORT_PACKED_OUTPUT_SCHEMAS: &str =
-    "from starkware.cairo.bootloaders.bootloader.objects import (
+pub const BOOTLOADER_IMPORT_PACKED_OUTPUT_SCHEMAS: &str = "from starkware.cairo.bootloaders.bootloader.objects import (
     CompositePackedOutput,
     PlainPackedOutput,
 )";
 
 // Appears as nondet %{ isinstance(packed_output, PlainPackedOutput) %} in the code.
-pub const BOOTLOADER_IS_PLAIN_PACKED_OUTPUT: &str =
-    "memory[ap] = to_felt_or_relocatable(isinstance(packed_output, PlainPackedOutput))";
+pub const BOOTLOADER_IS_PLAIN_PACKED_OUTPUT: &str = "memory[ap] = to_felt_or_relocatable(isinstance(packed_output, PlainPackedOutput))";
 
 pub const BOOTLOADER_SAVE_OUTPUT_POINTER: &str = "output_start = ids.output_ptr";
 
@@ -78,19 +72,15 @@ if bootloader_input.fact_topologies_path is not None:
         fact_topologies=plain_fact_topologies,
     )";
 
-pub const BOOTLOADER_GUESS_PRE_IMAGE_OF_SUBTASKS_OUTPUT_HASH: &str =
-    "data = packed_output.elements_for_hash()
+pub const BOOTLOADER_GUESS_PRE_IMAGE_OF_SUBTASKS_OUTPUT_HASH: &str = "data = packed_output.elements_for_hash()
 ids.nested_subtasks_output_len = len(data)
 ids.nested_subtasks_output = segments.gen_arg(data)";
 
-pub const BOOTLOADER_SET_PACKED_OUTPUT_TO_SUBTASKS: &str =
-    "packed_outputs = packed_output.subtasks";
+pub const BOOTLOADER_SET_PACKED_OUTPUT_TO_SUBTASKS: &str = "packed_outputs = packed_output.subtasks";
 
-pub const BOOTLOADER_ASSERT_IS_COMPOSITE_PACKED_OUTPUT: &str =
-    "assert isinstance(packed_output, CompositePackedOutput)";
+pub const BOOTLOADER_ASSERT_IS_COMPOSITE_PACKED_OUTPUT: &str = "assert isinstance(packed_output, CompositePackedOutput)";
 
-pub const SIMPLE_BOOTLOADER_PREPARE_TASK_RANGE_CHECKS: &str =
-    "n_tasks = len(simple_bootloader_input.tasks)
+pub const SIMPLE_BOOTLOADER_PREPARE_TASK_RANGE_CHECKS: &str = "n_tasks = len(simple_bootloader_input.tasks)
 memory[ids.output_ptr] = n_tasks
 
 # Task range checks are located right after simple bootloader validation range checks, and
@@ -104,11 +94,9 @@ fact_topologies = []";
 pub const SIMPLE_BOOTLOADER_SET_TASKS_VARIABLE: &str = "tasks = simple_bootloader_input.tasks";
 
 // Appears as nondet %{ ids.num // 2 %} in the code.
-pub const SIMPLE_BOOTLOADER_DIVIDE_NUM_BY_2: &str =
-    "memory[ap] = to_felt_or_relocatable(ids.num // 2)";
+pub const SIMPLE_BOOTLOADER_DIVIDE_NUM_BY_2: &str = "memory[ap] = to_felt_or_relocatable(ids.num // 2)";
 
-pub const SIMPLE_BOOTLOADER_SET_CURRENT_TASK: &str =
-    "from starkware.cairo.bootloaders.simple_bootloader.objects import Task
+pub const SIMPLE_BOOTLOADER_SET_CURRENT_TASK: &str = "from starkware.cairo.bootloaders.simple_bootloader.objects import Task
 
 # Pass current task to execute_task.
 task_id = len(simple_bootloader_input.tasks) - ids.n_tasks
@@ -118,14 +106,11 @@ task = simple_bootloader_input.tasks[task_id].load_task()";
 pub const SIMPLE_BOOTLOADER_ZERO_V0_13_0: &str = "memory[ap] = to_felt_or_relocatable(0)";
 
 // Appears as nondet %{ memory[ap] = to_felt_or_relocatable(1 if task.use_poseidon else 0) %} in the code (bootloader v0.13.1)
-pub const SIMPLE_BOOTLOADER_ZERO_V0_13_1: &str =
-    "memory[ap] = to_felt_or_relocatable(1 if task.use_poseidon else 0)";
+pub const SIMPLE_BOOTLOADER_ZERO_V0_13_1: &str = "memory[ap] = to_felt_or_relocatable(1 if task.use_poseidon else 0)";
 
-pub const EXECUTE_TASK_ALLOCATE_PROGRAM_DATA_SEGMENT: &str =
-    "ids.program_data_ptr = program_data_base = segments.add()";
+pub const EXECUTE_TASK_ALLOCATE_PROGRAM_DATA_SEGMENT: &str = "ids.program_data_ptr = program_data_base = segments.add()";
 
-pub const EXECUTE_TASK_LOAD_PROGRAM: &str =
-    "from starkware.cairo.bootloaders.simple_bootloader.utils import load_program
+pub const EXECUTE_TASK_LOAD_PROGRAM: &str = "from starkware.cairo.bootloaders.simple_bootloader.utils import load_program
 
 # Call load_program to load the program header and code to memory.
 program_address, program_data_size = load_program(
@@ -148,8 +133,7 @@ assert memory[ids.output_ptr + 1] == compute_program_hash_chain(
 pub const EXECUTE_TASK_ASSERT_PROGRAM_ADDRESS: &str = "# Sanity check.
 assert ids.program_address == program_address";
 
-pub const EXECUTE_TASK_CALL_TASK: &str =
-    "from starkware.cairo.bootloaders.simple_bootloader.objects import (
+pub const EXECUTE_TASK_CALL_TASK: &str = "from starkware.cairo.bootloaders.simple_bootloader.objects import (
     CairoPieTask,
     RunProgramTask,
     Task,
@@ -185,8 +169,7 @@ vm_enter_scope(new_task_locals)";
 pub const EXECUTE_TASK_EXIT_SCOPE: &str = "vm_exit_scope()
 # Note that bootloader_input will only be available in the next hint.";
 
-pub const EXECUTE_TASK_WRITE_RETURN_BUILTINS: &str =
-    "from starkware.cairo.bootloaders.simple_bootloader.utils import write_return_builtins
+pub const EXECUTE_TASK_WRITE_RETURN_BUILTINS: &str = "from starkware.cairo.bootloaders.simple_bootloader.utils import write_return_builtins
 
 # Fill the values of all builtin pointers after executing the task.
 builtins = task.get_program().builtins
@@ -210,8 +193,7 @@ fact_topologies.append(get_task_fact_topology(
     output_runner_data=output_runner_data,
 ))";
 
-pub const SELECT_BUILTINS_ENTER_SCOPE: &str =
-    "vm_enter_scope({'n_selected_builtins': ids.n_selected_builtins})";
+pub const SELECT_BUILTINS_ENTER_SCOPE: &str = "vm_enter_scope({'n_selected_builtins': ids.n_selected_builtins})";
 
 pub const INNER_SELECT_BUILTINS_SELECT_BUILTIN: &str =
     "# A builtin should be selected iff its encoding appears in the selected encodings list

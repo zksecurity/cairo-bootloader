@@ -1,13 +1,14 @@
-use std::any::Any;
-use std::collections::HashMap;
+use std::{any::Any, collections::HashMap};
 
-use cairo_vm::hint_processor::builtin_hint_processor::hint_utils::get_integer_from_var_name;
-use cairo_vm::hint_processor::hint_processor_definition::{HintExtension, HintReference};
-use cairo_vm::serde::deserialize_program::ApTracking;
-use cairo_vm::types::errors::math_errors::MathError;
-use cairo_vm::types::exec_scope::ExecutionScopes;
-use cairo_vm::vm::errors::hint_errors::HintError;
-use cairo_vm::vm::vm_core::VirtualMachine;
+use cairo_vm::{
+    hint_processor::{
+        builtin_hint_processor::hint_utils::get_integer_from_var_name,
+        hint_processor_definition::{HintExtension, HintReference},
+    },
+    serde::deserialize_program::ApTracking,
+    types::{errors::math_errors::MathError, exec_scope::ExecutionScopes},
+    vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
+};
 use num_traits::ToPrimitive;
 
 use crate::hints::vars;
@@ -20,14 +21,10 @@ pub fn select_builtins_enter_scope(
     ids_data: &HashMap<String, HintReference>,
     ap_tracking: &ApTracking,
 ) -> Result<HintExtension, HintError> {
-    let n_selected_builtins =
-        get_integer_from_var_name(vars::N_SELECTED_BUILTINS, vm, ids_data, ap_tracking)?;
-    let n_selected_builtins =
-        n_selected_builtins
-            .to_usize()
-            .ok_or(MathError::Felt252ToUsizeConversion(Box::new(
-                n_selected_builtins,
-            )))?;
+    let n_selected_builtins = get_integer_from_var_name(vars::N_SELECTED_BUILTINS, vm, ids_data, ap_tracking)?;
+    let n_selected_builtins = n_selected_builtins
+        .to_usize()
+        .ok_or(MathError::Felt252ToUsizeConversion(Box::new(n_selected_builtins)))?;
 
     exec_scopes.enter_scope(HashMap::from([(
         vars::N_SELECTED_BUILTINS.to_string(),
@@ -40,14 +37,12 @@ pub fn select_builtins_enter_scope(
 #[cfg(test)]
 mod tests {
 
-    use cairo_vm::serde::deserialize_program::ApTracking;
-    use cairo_vm::types::exec_scope::ExecutionScopes;
-    use cairo_vm::vm::vm_core::VirtualMachine;
     use std::collections::HashMap;
 
-    use crate::{define_segments, ids_data, vm};
+    use cairo_vm::{serde::deserialize_program::ApTracking, types::exec_scope::ExecutionScopes, vm::vm_core::VirtualMachine};
 
     use super::*;
+    use crate::{define_segments, ids_data, vm};
 
     #[test]
     fn test_select_builtins_enter_scope() {
@@ -61,8 +56,7 @@ mod tests {
         let ap_tracking = ApTracking::default();
         let mut exec_scopes = ExecutionScopes::new();
 
-        select_builtins_enter_scope(&mut vm, &mut exec_scopes, &ids_data, &ap_tracking)
-            .expect("Hint failed unexpectedly");
+        select_builtins_enter_scope(&mut vm, &mut exec_scopes, &ids_data, &ap_tracking).expect("Hint failed unexpectedly");
 
         // Check that we entered a new scope
         assert_eq!(exec_scopes.data.len(), 2);

@@ -1,14 +1,21 @@
 use std::collections::HashMap;
 
-use cairo_vm::types::builtin_name::BuiltinName;
-use cairo_vm::types::errors::math_errors::MathError;
-use cairo_vm::types::relocatable::{MaybeRelocatable, Relocatable};
-use cairo_vm::vm::errors::hint_errors::HintError;
-use cairo_vm::vm::errors::memory_errors::MemoryError;
-use cairo_vm::vm::runners::builtin_runner::SignatureBuiltinRunner;
-use cairo_vm::vm::runners::cairo_pie::{BuiltinAdditionalData, CairoPie, CairoPieMemory};
-use cairo_vm::vm::vm_core::VirtualMachine;
-use cairo_vm::Felt252;
+use cairo_vm::{
+    types::{
+        builtin_name::BuiltinName,
+        errors::math_errors::MathError,
+        relocatable::{MaybeRelocatable, Relocatable},
+    },
+    vm::{
+        errors::{hint_errors::HintError, memory_errors::MemoryError},
+        runners::{
+            builtin_runner::SignatureBuiltinRunner,
+            cairo_pie::{BuiltinAdditionalData, CairoPie, CairoPieMemory},
+        },
+        vm_core::VirtualMachine,
+    },
+    Felt252,
+};
 use thiserror_no_std::Error;
 
 #[derive(Error, Debug)]
@@ -87,11 +94,7 @@ impl RelocationTable {
     ///
     /// Returns `SegmentAlreadyMapped` if a relocation entry already exists for
     /// `segment_index`.
-    pub fn insert(
-        &mut self,
-        segment_index: isize,
-        relocation: Relocatable,
-    ) -> Result<(), RelocationTableError> {
+    pub fn insert(&mut self, segment_index: isize, relocation: Relocatable) -> Result<(), RelocationTableError> {
         if self.relocations.contains_key(&segment_index) {
             return Err(RelocationTableError::SegmentAlreadyMapped(segment_index));
         }
@@ -106,10 +109,7 @@ impl RelocationTable {
     /// returns (i*, o + o*).
     /// Returns `MemoryError::Relocation` if there is no matching relocation.
     pub fn relocate_address(&self, address: Relocatable) -> Result<Relocatable, MemoryError> {
-        let new_base = self
-            .relocations
-            .get(&address.segment_index)
-            .ok_or(MemoryError::Relocation)?;
+        let new_base = self.relocations.get(&address.segment_index).ok_or(MemoryError::Relocation)?;
 
         let relocated_pointer = (*new_base + address.offset)?;
         Ok(relocated_pointer)
@@ -141,9 +141,7 @@ pub fn extract_segment(maybe_relocatable: MaybeRelocatable) -> Result<isize, Rel
 
             Ok(address.segment_index)
         }
-        MaybeRelocatable::Int(_) => Err(RelocationTableError::Memory(
-            MemoryError::AddressNotRelocatable,
-        )),
+        MaybeRelocatable::Int(_) => Err(RelocationTableError::Memory(MemoryError::AddressNotRelocatable)),
     }
 }
 
@@ -173,10 +171,7 @@ pub fn build_cairo_pie_relocation_table(
     let mut relocation_table = RelocationTable::new();
 
     relocation_table.insert(cairo_pie.metadata.program_segment.index, program_address)?;
-    relocation_table.insert(
-        cairo_pie.metadata.execution_segment.index,
-        execution_segment_address,
-    )?;
+    relocation_table.insert(cairo_pie.metadata.execution_segment.index, execution_segment_address)?;
     relocation_table.insert(cairo_pie.metadata.ret_fp_segment.index, ret_fp)?;
     relocation_table.insert(cairo_pie.metadata.ret_pc_segment.index, ret_pc)?;
 
@@ -282,14 +277,7 @@ pub(crate) fn load_cairo_pie(
     ret_fp: Relocatable,
     ret_pc: Relocatable,
 ) -> Result<(), CairoPieLoaderError> {
-    let relocation_table = build_cairo_pie_relocation_table(
-        cairo_pie,
-        vm,
-        program_address,
-        execution_segment_address,
-        ret_fp,
-        ret_pc,
-    )?;
+    let relocation_table = build_cairo_pie_relocation_table(cairo_pie, vm, program_address, execution_segment_address, ret_fp, ret_pc)?;
 
     relocate_builtin_additional_data(cairo_pie, vm, &relocation_table)?;
     relocate_cairo_pie_memory(cairo_pie, vm, &relocation_table)?;
@@ -319,10 +307,7 @@ mod tests {
 
         let address = Relocatable::from((1, 27));
         let expected_address = Relocatable::from((2, 32));
-        assert_eq!(
-            relocation_table.relocate_address(address),
-            Ok(expected_address)
-        );
+        assert_eq!(relocation_table.relocate_address(address), Ok(expected_address));
 
         let value = MaybeRelocatable::RelocatableValue(address);
         let expected_value = MaybeRelocatable::RelocatableValue(expected_address);
@@ -334,10 +319,7 @@ mod tests {
         let relocation_table = RelocationTable::new();
 
         let value = MaybeRelocatable::RelocatableValue(Relocatable::from((1, 0)));
-        assert_eq!(
-            relocation_table.relocate_value(value.clone()),
-            Err(MemoryError::Relocation)
-        );
+        assert_eq!(relocation_table.relocate_value(value.clone()), Err(MemoryError::Relocation));
     }
 
     #[test]
@@ -374,11 +356,6 @@ mod tests {
     #[test]
     fn test_extract_segment_base_not_an_address() {
         let result = extract_segment(MaybeRelocatable::Int(Felt252::from(1)));
-        assert_matches!(
-            result,
-            Err(RelocationTableError::Memory(
-                MemoryError::AddressNotRelocatable
-            ))
-        );
+        assert_matches!(result, Err(RelocationTableError::Memory(MemoryError::AddressNotRelocatable)));
     }
 }

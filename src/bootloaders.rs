@@ -1,10 +1,9 @@
-use cairo_vm::types::errors::program_errors::ProgramError;
-use cairo_vm::types::program::Program;
+use cairo_vm::types::{errors::program_errors::ProgramError, program::Program};
 
 pub use crate::hints::*;
 
-const BOOTLOADER_V0_13_0: &[u8] = include_bytes!("../resources/bootloader-0.13.0.json");
-const BOOTLOADER_V0_13_1: &[u8] = include_bytes!("../resources/bootloader-0.13.1.json");
+pub const BOOTLOADER_V0_13_0: &[u8] = include_bytes!("../resources/bootloader-0.13.0.json");
+pub const BOOTLOADER_V0_13_1: &[u8] = include_bytes!("../resources/bootloader-0.13.1.json");
 
 /// Loads the bootloader and returns it as a Cairo VM `Program` object.
 pub fn load_bootloader() -> Result<Program, ProgramError> {

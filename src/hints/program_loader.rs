@@ -1,11 +1,12 @@
-use cairo_vm::types::builtin_name::BuiltinName;
-use cairo_vm::types::errors::math_errors::MathError;
-use cairo_vm::types::relocatable::Relocatable;
-use cairo_vm::vm::errors::hint_errors::HintError;
-use cairo_vm::vm::errors::memory_errors::MemoryError;
-use cairo_vm::vm::runners::cairo_pie::StrippedProgram;
-use cairo_vm::vm::vm_core::VirtualMachine;
-use cairo_vm::Felt252;
+use cairo_vm::{
+    types::{builtin_name::BuiltinName, errors::math_errors::MathError, relocatable::Relocatable},
+    vm::{
+        errors::{hint_errors::HintError, memory_errors::MemoryError},
+        runners::cairo_pie::StrippedProgram,
+        vm_core::VirtualMachine,
+    },
+    Felt252,
+};
 
 use crate::hints::types::BootloaderVersion;
 
@@ -58,21 +59,13 @@ pub struct ProgramLoader<'vm> {
 
 impl<'vm> ProgramLoader<'vm> {
     pub fn new(vm: &'vm mut VirtualMachine, builtins_offset: usize) -> Self {
-        Self {
-            vm,
-            builtins_offset,
-        }
+        Self { vm, builtins_offset }
     }
 
-    fn load_builtins(
-        &mut self,
-        builtin_list_ptr: Relocatable,
-        builtins: &[BuiltinName],
-    ) -> Result<(), ProgramLoaderError> {
+    fn load_builtins(&mut self, builtin_list_ptr: Relocatable, builtins: &[BuiltinName]) -> Result<(), ProgramLoaderError> {
         for (index, builtin) in builtins.iter().enumerate() {
             let builtin_felt = builtin_to_felt(builtin)?;
-            self.vm
-                .insert_value((builtin_list_ptr + index)?, builtin_felt)?;
+            self.vm.insert_value((builtin_list_ptr + index)?, builtin_felt)?;
         }
 
         Ok(())
@@ -104,8 +97,7 @@ impl<'vm> ProgramLoader<'vm> {
         let bootloader_version = bootloader_version.unwrap_or(0);
 
         self.vm.insert_value(data_length_ptr, data_length)?;
-        self.vm
-            .insert_value(bootloader_version_ptr, Felt252::from(bootloader_version))?;
+        self.vm.insert_value(bootloader_version_ptr, Felt252::from(bootloader_version))?;
         self.vm.insert_value(program_main_ptr, program_main)?;
         self.vm.insert_value(n_builtins_ptr, n_builtins)?;
 
@@ -114,11 +106,7 @@ impl<'vm> ProgramLoader<'vm> {
         Ok(header_size)
     }
 
-    fn load_code(
-        &mut self,
-        base_address: Relocatable,
-        program: &StrippedProgram,
-    ) -> Result<(), ProgramLoaderError> {
+    fn load_code(&mut self, base_address: Relocatable, program: &StrippedProgram) -> Result<(), ProgramLoaderError> {
         for (index, opcode) in program.data.iter().enumerate() {
             self.vm.insert_value((base_address + index)?, opcode)?;
         }
@@ -129,8 +117,7 @@ impl<'vm> ProgramLoader<'vm> {
     /// Loads a Cairo program in the VM memory.
     ///
     /// Programs are loaded in two parts:
-    /// 1. The program header contains metadata (ex: entrypoint, program size,
-    ///    builtins used by the program).
+    /// 1. The program header contains metadata (ex: entrypoint, program size, builtins used by the program).
     /// 2. The program itself.
     ///
     /// Starting from `base_address`, the header contains the following fields:
@@ -165,17 +152,15 @@ impl<'vm> ProgramLoader<'vm> {
 
 #[cfg(test)]
 mod tests {
-    use cairo_vm::types::builtin_name::BuiltinName;
-    use cairo_vm::types::program::Program;
-    use cairo_vm::types::relocatable::Relocatable;
-    use cairo_vm::vm::runners::cairo_pie::StrippedProgram;
-    use cairo_vm::vm::vm_memory::memory_segments::MemorySegmentManager;
-    use cairo_vm::Felt252;
+    use cairo_vm::{
+        types::{builtin_name::BuiltinName, program::Program, relocatable::Relocatable},
+        vm::{runners::cairo_pie::StrippedProgram, vm_memory::memory_segments::MemorySegmentManager},
+        Felt252,
+    };
     use rstest::{fixture, rstest};
 
-    use crate::{add_segments, hints::types::BootloaderVersion};
-
     use super::*;
+    use crate::{add_segments, hints::types::BootloaderVersion};
 
     #[rstest]
     #[case::output(BuiltinName::output, 122550255383924)]
@@ -187,24 +172,13 @@ mod tests {
         assert_eq!(felt, expected_felt);
     }
 
-    fn check_loaded_builtins(
-        vm: &VirtualMachine,
-        builtins: &[&str],
-        builtin_list_ptr: Relocatable,
-    ) {
+    fn check_loaded_builtins(vm: &VirtualMachine, builtins: &[&str], builtin_list_ptr: Relocatable) {
         let builtin_felts = vm
             .get_integer_range(builtin_list_ptr, builtins.len())
             .expect("Builtins not loaded properly in memory");
-        for (builtin, felt) in std::iter::zip(vec!["bitwise", "output", "pedersen"], builtin_felts)
-        {
+        for (builtin, felt) in std::iter::zip(vec!["bitwise", "output", "pedersen"], builtin_felts) {
             let builtin_from_felt = String::from_utf8(felt.into_owned().to_bytes_be().to_vec())
-                .expect(
-                    format!(
-                        "Could not decode builtin from memory (expected {})",
-                        builtin
-                    )
-                    .as_ref(),
-                );
+                .expect(format!("Could not decode builtin from memory (expected {})", builtin).as_ref());
             // Compare the last N characters, builtin_from_felt is padded left with zeroes
             assert_eq!(&builtin_from_felt[32 - builtin.len()..32], builtin);
         }
@@ -212,11 +186,7 @@ mod tests {
 
     #[test]
     fn test_load_builtins() {
-        let builtins = vec![
-            BuiltinName::bitwise,
-            BuiltinName::output,
-            BuiltinName::pedersen,
-        ];
+        let builtins = vec![BuiltinName::bitwise, BuiltinName::output, BuiltinName::pedersen];
 
         let mut vm = VirtualMachine::new(false);
         let builtin_list_ptr = vm.add_memory_segment();
@@ -228,20 +198,14 @@ mod tests {
             .load_builtins(builtin_list_ptr, &builtins)
             .expect("Failed to load builtins in memory");
 
-        check_loaded_builtins(
-            &vm,
-            &vec!["bitwise", "output", "pedersen"],
-            builtin_list_ptr,
-        );
+        check_loaded_builtins(&vm, &vec!["bitwise", "output", "pedersen"], builtin_list_ptr);
     }
 
     #[fixture]
     fn fibonacci() -> Program {
-        let program_content =
-            include_bytes!("../../dependencies/test-programs/cairo0/fibonacci/fibonacci.json");
+        let program_content = include_bytes!("../../dependencies/test-programs/cairo0/fibonacci/fibonacci.json");
 
-        Program::from_bytes(program_content, Some("main"))
-            .expect("Loading example program failed unexpectedly")
+        Program::from_bytes(program_content, Some("main")).expect("Loading example program failed unexpectedly")
     }
 
     fn check_loaded_header(
@@ -255,22 +219,10 @@ mod tests {
         let program_main = program.main;
         let n_builtins = program.builtins.len();
 
-        assert_eq!(
-            header_felts[0].clone().into_owned(),
-            Felt252::from(expected_data_length)
-        );
-        assert_eq!(
-            header_felts[1].clone().into_owned(),
-            Felt252::from(bootloader_version)
-        );
-        assert_eq!(
-            header_felts[2].clone().into_owned(),
-            Felt252::from(program_main)
-        );
-        assert_eq!(
-            header_felts[3].clone().into_owned(),
-            Felt252::from(n_builtins)
-        );
+        assert_eq!(header_felts[0].clone().into_owned(), Felt252::from(expected_data_length));
+        assert_eq!(header_felts[1].clone().into_owned(), Felt252::from(bootloader_version));
+        assert_eq!(header_felts[2].clone().into_owned(), Felt252::from(program_main));
+        assert_eq!(header_felts[3].clone().into_owned(), Felt252::from(n_builtins));
     }
 
     #[rstest]
@@ -296,11 +248,7 @@ mod tests {
         check_loaded_builtins(&vm, &vec![], builtin_list_ptr);
     }
 
-    fn check_loaded_program(
-        vm: &VirtualMachine,
-        code_address: Relocatable,
-        program: &StrippedProgram,
-    ) {
+    fn check_loaded_program(vm: &VirtualMachine, code_address: Relocatable, program: &StrippedProgram) {
         let loaded_opcodes = vm
             .get_continuous_range(code_address, program.data.len())
             .expect("Program not loaded properly in memory");

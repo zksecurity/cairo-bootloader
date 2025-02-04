@@ -1,22 +1,27 @@
-use crate::hints::execute_task_hints::ALL_BUILTINS;
-use crate::hints::fact_topologies::FactTopology;
-use crate::hints::types::{RunProgramTask, SimpleBootloaderInput, TaskSpec};
-use crate::hints::vars;
-use crate::CairoPieTask;
-use cairo_vm::hint_processor::builtin_hint_processor::hint_utils::{
-    get_integer_from_var_name, get_ptr_from_var_name, insert_value_from_var_name,
-    insert_value_into_ap,
+use std::collections::HashMap;
+
+use cairo_vm::{
+    hint_processor::{
+        builtin_hint_processor::hint_utils::{
+            get_integer_from_var_name, get_ptr_from_var_name, insert_value_from_var_name, insert_value_into_ap,
+        },
+        hint_processor_definition::{HintExtension, HintReference},
+    },
+    serde::deserialize_program::ApTracking,
+    types::{errors::math_errors::MathError, exec_scope::ExecutionScopes},
+    vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
+    Felt252,
 };
-use cairo_vm::hint_processor::hint_processor_definition::{HintExtension, HintReference};
-use cairo_vm::serde::deserialize_program::ApTracking;
-use cairo_vm::types::errors::math_errors::MathError;
-use cairo_vm::types::exec_scope::ExecutionScopes;
-use cairo_vm::vm::errors::hint_errors::HintError;
-use cairo_vm::vm::vm_core::VirtualMachine;
-use cairo_vm::Felt252;
 use num_traits::ToPrimitive;
 use starknet_types_core::felt::NonZeroFelt;
-use std::collections::HashMap;
+
+use crate::hints::{
+    execute_task_hints::ALL_BUILTINS,
+    fact_topologies::FactTopology,
+    types::{CairoPieTask, RunProgramTask, SimpleBootloaderInput, TaskSpec},
+    vars,
+};
+
 /// Implements
 /// n_tasks = len(simple_bootloader_input.tasks)
 /// memory[ids.output_ptr] = n_tasks
@@ -35,8 +40,7 @@ pub fn prepare_task_range_checks(
     ap_tracking: &ApTracking,
 ) -> Result<HintExtension, HintError> {
     // n_tasks = len(simple_bootloader_input.tasks)
-    let simple_bootloader_input: &SimpleBootloaderInput =
-        exec_scopes.get_ref(vars::SIMPLE_BOOTLOADER_INPUT)?;
+    let simple_bootloader_input: &SimpleBootloaderInput = exec_scopes.get_ref(vars::SIMPLE_BOOTLOADER_INPUT)?;
     let n_tasks = simple_bootloader_input.tasks.len();
 
     // memory[ids.output_ptr] = n_tasks
@@ -47,13 +51,7 @@ pub fn prepare_task_range_checks(
     const BUILTIN_DATA_SIZE: usize = ALL_BUILTINS.len();
     let range_check_ptr = get_ptr_from_var_name("range_check_ptr", vm, ids_data, ap_tracking)?;
     let task_range_check_ptr = (range_check_ptr + BUILTIN_DATA_SIZE * n_tasks)?;
-    insert_value_from_var_name(
-        "task_range_check_ptr",
-        task_range_check_ptr,
-        vm,
-        ids_data,
-        ap_tracking,
-    )?;
+    insert_value_from_var_name("task_range_check_ptr", task_range_check_ptr, vm, ids_data, ap_tracking)?;
 
     // fact_topologies = []
     let fact_topologies = Vec::<FactTopology>::new();
@@ -65,8 +63,7 @@ pub fn prepare_task_range_checks(
 /// Implements
 /// %{ tasks = simple_bootloader_input.tasks %}
 pub fn set_tasks_variable(exec_scopes: &mut ExecutionScopes) -> Result<HintExtension, HintError> {
-    let simple_bootloader_input: &SimpleBootloaderInput =
-        exec_scopes.get_ref(vars::SIMPLE_BOOTLOADER_INPUT)?;
+    let simple_bootloader_input: &SimpleBootloaderInput = exec_scopes.get_ref(vars::SIMPLE_BOOTLOADER_INPUT)?;
     exec_scopes.insert_value(vars::TASKS, simple_bootloader_input.tasks.clone());
 
     Ok(HashMap::new())
@@ -108,8 +105,7 @@ pub fn set_ap_to_zero_or_one(
     ids_data: &HashMap<String, HintReference>,
     ap_tracking: &ApTracking,
 ) -> Result<HintExtension, HintError> {
-    let simple_bootloader_input: &SimpleBootloaderInput =
-        exec_scopes.get_ref(vars::SIMPLE_BOOTLOADER_INPUT)?;
+    let simple_bootloader_input: &SimpleBootloaderInput = exec_scopes.get_ref(vars::SIMPLE_BOOTLOADER_INPUT)?;
     let n_tasks_felt = get_integer_from_var_name("n_tasks", vm, ids_data, ap_tracking)?;
     let n_tasks = n_tasks_felt
         .to_usize()
@@ -142,8 +138,7 @@ pub fn set_current_task(
     ids_data: &HashMap<String, HintReference>,
     ap_tracking: &ApTracking,
 ) -> Result<HintExtension, HintError> {
-    let simple_bootloader_input: &SimpleBootloaderInput =
-        exec_scopes.get_ref(vars::SIMPLE_BOOTLOADER_INPUT)?;
+    let simple_bootloader_input: &SimpleBootloaderInput = exec_scopes.get_ref(vars::SIMPLE_BOOTLOADER_INPUT)?;
     let n_tasks_felt = get_integer_from_var_name("n_tasks", vm, ids_data, ap_tracking)?;
     let n_tasks = n_tasks_felt
         .to_usize()
@@ -156,11 +151,9 @@ pub fn set_current_task(
     match task {
         Ok(task) => {
             if let Some(run_program_task) = task.as_any().downcast_ref::<RunProgramTask>() {
-                exec_scopes
-                    .insert_value(vars::TASK, TaskSpec::RunProgram(run_program_task.clone()));
+                exec_scopes.insert_value(vars::TASK, TaskSpec::RunProgram(run_program_task.clone()));
             } else if let Some(cairo_pie_task) = task.as_any().downcast_ref::<CairoPieTask>() {
-                exec_scopes
-                    .insert_value(vars::TASK, TaskSpec::CairoPieTask(cairo_pie_task.clone()));
+                exec_scopes.insert_value(vars::TASK, TaskSpec::CairoPieTask(cairo_pie_task.clone()));
             }
         }
         Err(_) => return Err(HintError::CustomHint("Task not found".into())),
@@ -171,40 +164,30 @@ pub fn set_current_task(
 
 #[cfg(test)]
 mod tests {
-    use std::any::Any;
-    use std::collections::HashMap;
+    use std::{any::Any, collections::HashMap};
 
-    use cairo_vm::hint_processor::builtin_hint_processor::hint_utils::{
-        get_ptr_from_var_name, insert_value_from_var_name,
+    use cairo_vm::{
+        hint_processor::builtin_hint_processor::hint_utils::{get_ptr_from_var_name, insert_value_from_var_name},
+        serde::deserialize_program::ApTracking,
+        types::{exec_scope::ExecutionScopes, program::Program, relocatable::Relocatable},
+        vm::vm_core::VirtualMachine,
+        Felt252,
     };
-
-    use cairo_vm::serde::deserialize_program::ApTracking;
-    use cairo_vm::types::exec_scope::ExecutionScopes;
-    use cairo_vm::types::program::Program;
-    use cairo_vm::types::relocatable::Relocatable;
-
-    use cairo_vm::vm::vm_core::VirtualMachine;
-
-    use cairo_vm::Felt252;
     use num_traits::ToPrimitive;
     use rstest::{fixture, rstest};
 
-    use crate::hints::fact_topologies::FactTopology;
-
-    use crate::hints::types::{Task, TaskSpec};
-    use crate::hints::vars;
-    use crate::{add_segments, define_segments, ids_data, vm};
-
     use super::*;
+    use crate::{
+        add_segments, define_segments,
+        hints::{fact_topologies::FactTopology, types::TaskSpec, vars},
+        ids_data, vm,
+    };
 
     #[fixture]
     fn fibonacci() -> Program {
-        let program_content =
-            include_bytes!("../../dependencies/test-programs/cairo0/fibonacci/fibonacci.json")
-                .to_vec();
+        let program_content = include_bytes!("../../dependencies/test-programs/cairo0/fibonacci/fibonacci.json").to_vec();
 
-        Program::from_bytes(&program_content, Some("main"))
-            .expect("Loading example program failed unexpectedly")
+        Program::from_bytes(&program_content, Some("main")).expect("Loading example program failed unexpectedly")
     }
 
     #[fixture]
@@ -236,19 +219,13 @@ mod tests {
         vm.add_memory_segment();
 
         let mut exec_scopes = ExecutionScopes::new();
-        exec_scopes.insert_value(
-            vars::SIMPLE_BOOTLOADER_INPUT,
-            simple_bootloader_input.clone(),
-        );
+        exec_scopes.insert_value(vars::SIMPLE_BOOTLOADER_INPUT, simple_bootloader_input.clone());
 
         let ap_tracking = ApTracking::new();
 
-        prepare_task_range_checks(&mut vm, &mut exec_scopes, &ids_data, &ap_tracking)
-            .expect("Hint failed unexpectedly");
+        prepare_task_range_checks(&mut vm, &mut exec_scopes, &ids_data, &ap_tracking).expect("Hint failed unexpectedly");
 
-        let task_range_check_ptr =
-            get_ptr_from_var_name("task_range_check_ptr", &mut vm, &ids_data, &ap_tracking)
-                .unwrap();
+        let task_range_check_ptr = get_ptr_from_var_name("task_range_check_ptr", &mut vm, &ids_data, &ap_tracking).unwrap();
 
         // Assert *output_ptr == n_tasks
         let output = vm
@@ -270,9 +247,7 @@ mod tests {
             }
         );
 
-        let fact_topologies: Vec<FactTopology> = exec_scopes
-            .get(vars::FACT_TOPOLOGIES)
-            .expect("Fact topologies missing from scope");
+        let fact_topologies: Vec<FactTopology> = exec_scopes.get(vars::FACT_TOPOLOGIES).expect("Fact topologies missing from scope");
         assert!(fact_topologies.is_empty());
     }
 
@@ -285,9 +260,7 @@ mod tests {
 
         set_tasks_variable(&mut exec_scopes).expect("Hint failed unexpectedly");
 
-        let tasks: Vec<TaskSpec> = exec_scopes
-            .get(vars::TASKS)
-            .expect("Tasks variable is not set");
+        let tasks: Vec<TaskSpec> = exec_scopes.get(vars::TASKS).expect("Tasks variable is not set");
         assert_eq!(tasks, bootloader_tasks);
     }
 
@@ -338,8 +311,7 @@ mod tests {
 
         let ids_data = ids_data!["n_tasks"];
         let ap_tracking = ApTracking::new();
-        set_ap_to_zero_or_one(&mut vm, &mut exec_scopes, &ids_data, &ap_tracking)
-            .expect("Hint failed unexpectedly");
+        set_ap_to_zero_or_one(&mut vm, &mut exec_scopes, &ids_data, &ap_tracking).expect("Hint failed unexpectedly");
 
         let ap_value = vm.get_integer(vm.get_ap()).unwrap().into_owned();
 
@@ -358,12 +330,9 @@ mod tests {
 
         let ids_data = ids_data!["n_tasks", "task"];
         let ap_tracking = ApTracking::new();
-        set_current_task(&mut vm, &mut exec_scopes, &ids_data, &ap_tracking)
-            .expect("Hint failed unexpectedly");
+        set_current_task(&mut vm, &mut exec_scopes, &ids_data, &ap_tracking).expect("Hint failed unexpectedly");
 
         // Check that `task` is set
-        let _task: &Box<dyn Any> = exec_scopes
-            .get_any_boxed_ref(vars::TASK)
-            .expect("task variable is not set.");
+        let _task: &Box<dyn Any> = exec_scopes.get_any_boxed_ref(vars::TASK).expect("task variable is not set.");
     }
 }

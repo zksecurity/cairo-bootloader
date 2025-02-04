@@ -1,14 +1,15 @@
-use cairo_vm::Felt252;
 use std::collections::HashMap;
 
-use cairo_vm::hint_processor::builtin_hint_processor::hint_utils::{
-    get_ptr_from_var_name, insert_value_from_var_name,
+use cairo_vm::{
+    hint_processor::{
+        builtin_hint_processor::hint_utils::{get_ptr_from_var_name, insert_value_from_var_name},
+        hint_processor_definition::{HintExtension, HintReference},
+    },
+    serde::deserialize_program::ApTracking,
+    types::exec_scope::ExecutionScopes,
+    vm::{errors::hint_errors::HintError, vm_core::VirtualMachine},
+    Felt252,
 };
-use cairo_vm::hint_processor::hint_processor_definition::{HintExtension, HintReference};
-use cairo_vm::serde::deserialize_program::ApTracking;
-use cairo_vm::types::exec_scope::ExecutionScopes;
-use cairo_vm::vm::errors::hint_errors::HintError;
-use cairo_vm::vm::vm_core::VirtualMachine;
 
 use crate::hints::vars;
 
@@ -33,8 +34,7 @@ pub fn select_builtin(
     let select_builtin = if n_selected_builtins == 0 {
         false
     } else {
-        let selected_encodings =
-            get_ptr_from_var_name("selected_encodings", vm, ids_data, ap_tracking)?;
+        let selected_encodings = get_ptr_from_var_name("selected_encodings", vm, ids_data, ap_tracking)?;
         let all_encodings = get_ptr_from_var_name("all_encodings", vm, ids_data, ap_tracking)?;
 
         let selected_encoding = vm.get_integer(selected_encodings)?.into_owned();
@@ -44,13 +44,7 @@ pub fn select_builtin(
     };
 
     let select_builtin_felt = Felt252::from(select_builtin);
-    insert_value_from_var_name(
-        "select_builtin",
-        select_builtin_felt,
-        vm,
-        ids_data,
-        ap_tracking,
-    )?;
+    insert_value_from_var_name("select_builtin", select_builtin_felt, vm, ids_data, ap_tracking)?;
 
     if select_builtin {
         exec_scopes.insert_value(vars::N_SELECTED_BUILTINS, n_selected_builtins - 1);
@@ -61,13 +55,11 @@ pub fn select_builtin(
 
 #[cfg(test)]
 mod tests {
-    use cairo_vm::hint_processor::builtin_hint_processor::hint_utils::get_integer_from_var_name;
-    use cairo_vm::Felt252;
+    use cairo_vm::{hint_processor::builtin_hint_processor::hint_utils::get_integer_from_var_name, Felt252};
     use rstest::rstest;
 
-    use crate::{add_segments, define_segments, ids_data, vm};
-
     use super::*;
+    use crate::{add_segments, define_segments, ids_data, vm};
 
     #[rstest]
     #[case::should_select_builtin(1usize, true)]
@@ -77,11 +69,7 @@ mod tests {
         let mut vm = vm!();
 
         let builtin_value = 10;
-        let expected_value = if should_select_builtin {
-            builtin_value
-        } else {
-            builtin_value + 1
-        };
+        let expected_value = if should_select_builtin { builtin_value } else { builtin_value + 1 };
 
         define_segments!(
             vm,
@@ -102,13 +90,11 @@ mod tests {
         let mut exec_scopes = ExecutionScopes::new();
         exec_scopes.insert_value(vars::N_SELECTED_BUILTINS, n_builtins);
 
-        select_builtin(&mut vm, &mut exec_scopes, &ids_data, &ap_tracking)
-            .expect("Hint failed unexpectedly");
+        select_builtin(&mut vm, &mut exec_scopes, &ids_data, &ap_tracking).expect("Hint failed unexpectedly");
 
-        let select_builtin =
-            get_integer_from_var_name("select_builtin", &vm, &ids_data, &ap_tracking)
-                .unwrap()
-                .to_owned();
+        let select_builtin = get_integer_from_var_name("select_builtin", &vm, &ids_data, &ap_tracking)
+            .unwrap()
+            .to_owned();
         let n_selected_builtins: usize = exec_scopes.get(vars::N_SELECTED_BUILTINS).unwrap();
 
         if (n_builtins != 0) && should_select_builtin {

@@ -11,6 +11,10 @@ We currently support Cairo bootloader v0.13.0.
 
 We provide two hint processors that can be used to execute bootloader hints.
 
+``` sh
+cargo run -- --cairo_pies pie.zip --secure_run true --ignore_fact_topologies --cairo_pie_output bootloader_pie.zip
+```
+
 ### Standalone hint processor
 
 The standalone hint processor (`BootloaderHintProcessor`) is the simplest way to execute the bootloader. 
